@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / Python files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Matplotlib cache
+.mpl/
+reports/figures/.mpl/
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.env
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# Streamlit local config & state
+.streamlit/
+
+# Unrelated prior workspace files
+project_ai_mern_image_generation/
+package-lock.json
+.cursor/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini

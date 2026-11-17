@@ -1,0 +1,228 @@
+// ==============================================================================
+// POWER BI DAX MEASURES SPECIFICATION
+// Project: E-Commerce Customer Behaviour Analysis & Segmentation
+// Table Recommendation: Create a disconnected dummy table '_Measures' to house all DAX
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+// 1. CORE TRANSACTION & REVENUE MEASURES
+// ------------------------------------------------------------------------------
+
+Total Revenue = 
+/* Aggregate commercial sales revenue across all observed transactions */
+SUM(fact_sales[Revenue])
+
+Total Orders = 
+/* Total distinct sales order transactions */
+DISTINCTCOUNT(fact_sales[TransactionID])
+
+Total Customers = 
+/* Total distinct customer count evaluated in context */
+DISTINCTCOUNT(dim_customer[CustomerID])
+
+Average Order Value = 
+/* Average financial basket size per transaction */
+DIVIDE(
+    [Total Revenue],
+    [Total Orders],
+    0
+)
+
+Total Units Sold = 
+/* Cumulative product units sold */
+SUM(fact_sales[Quantity])
+
+Average Selling Price = 
+/* Average price per individual unit sold */
+DIVIDE(
+    [Total Revenue],
+    [Total Units Sold],
+    0
+)
+
+
+// ------------------------------------------------------------------------------
+// 2. CUSTOMER BEHAVIOUR & RETENTION MEASURES
+// ------------------------------------------------------------------------------
+
+New Customers = 
+/* Early-stage customers with fewer than 10 lifetime orders */
+CALCULATE(
+    [Total Customers],
+    dim_customer[Customer_Type] = "New Customer"
+)
+
+Returning Customers = 
+/* Established customers with 10 or more lifetime orders */
+CALCULATE(
+    [Total Customers],
+    dim_customer[Customer_Type] = "Returning Customer"
+)
+
+Repeat Customer % = 
+/* Proportion of active customer base represented by returning/repeat buyers */
+DIVIDE(
+    [Returning Customers],
+    [Total Customers],
+    0
+)
+
+Revenue per Customer = 
+/* Average transaction revenue generated per active customer in current context */
+DIVIDE(
+    [Total Revenue],
+    [Total Customers],
+    0
+)
+
+Average Customer Lifetime Value = 
+/* Mean cumulative lifetime revenue across customers */
+AVERAGE(dim_customer[Lifetime_Revenue])
+
+Total Lifetime Revenue = 
+/* Aggregate lifetime financial spend of customers in scope */
+SUM(dim_customer[Lifetime_Revenue])
+
+Average Tenure Months = 
+/* Average customer relationship lifespan in months */
+AVERAGE(dim_customer[Active_Months])
+
+Average Days Between Orders = 
+/* Average expected purchase cadence in days */
+AVERAGE(dim_customer[Avg_Gap_Days])
+
+Average Customer Rating = 
+/* Mean customer satisfaction rating (1.0 to 5.0) */
+AVERAGE(dim_customer[Review_Rating])
+
+
+// ------------------------------------------------------------------------------
+// 3. SEGMENTATION & CHURN RISK MEASURES
+// ------------------------------------------------------------------------------
+
+High-Risk Churn Customers = 
+/* Count of customers identified by ML model in High Risk tier (Probability > 70%) */
+CALCULATE(
+    [Total Customers],
+    dim_customer[Risk_Level] = "High Risk (Churning)"
+)
+
+Medium-Risk Churn Customers = 
+/* Count of customers in transitional Medium Risk tier (Probability 30% to 70%) */
+CALCULATE(
+    [Total Customers],
+    dim_customer[Risk_Level] = "Medium Risk"
+)
+
+Low-Risk Churn Customers = 
+/* Count of active customers in Low Risk tier (Probability < 30%) */
+CALCULATE(
+    [Total Customers],
+    dim_customer[Risk_Level] = "Low Risk (Active)"
+)
+
+High-Risk Churn % = 
+/* Percentage of total customer base at severe risk of permanent attrition */
+DIVIDE(
+    [High-Risk Churn Customers],
+    [Total Customers],
+    0
+)
+
+Average Churn Probability = 
+/* Mean calibrated churn probability across filtered customer cohort */
+AVERAGE(dim_customer[Churn_Probability])
+
+Champions Revenue = 
+/* Revenue contributed by Champions RFM Segment */
+CALCULATE(
+    [Total Revenue],
+    dim_customer[RFM_Segment] = "Champions"
+)
+
+High-Value Active Revenue = 
+/* Revenue contributed by K-Means High-Value Active Cluster */
+CALCULATE(
+    [Total Revenue],
+    dim_customer[Cluster_Label] = "High-Value Active"
+)
+
+
+// ------------------------------------------------------------------------------
+// 4. PROMOTIONS & LOYALTY ENGAGEMENT MEASURES
+// ------------------------------------------------------------------------------
+
+Discounted Orders = 
+/* Number of transactions where a promotional discount was applied */
+CALCULATE(
+    [Total Orders],
+    fact_sales[Discount_Applied] = "Yes"
+)
+
+Discount Penetration % = 
+/* Percentage of orders utilizing sales discounts */
+DIVIDE(
+    [Discounted Orders],
+    [Total Orders],
+    0
+)
+
+Promo Code Orders = 
+/* Number of transactions where a voucher promo code was redeemed */
+CALCULATE(
+    [Total Orders],
+    fact_sales[Promo_Code_Used] = "Yes"
+)
+
+Promo Redemption Rate % = 
+/* Percentage of orders using voucher promo codes */
+DIVIDE(
+    [Promo Code Orders],
+    [Total Orders],
+    0
+)
+
+Subscribed Customers = 
+/* Total customer count enrolled in active subscription program */
+CALCULATE(
+    [Total Customers],
+    dim_customer[Subscription_Status] = "Yes"
+)
+
+Subscription Penetration % = 
+/* Share of customer base with active loyalty subscriptions */
+DIVIDE(
+    [Subscribed Customers],
+    [Total Customers],
+    0
+)
+
+
+// ------------------------------------------------------------------------------
+// 5. TIME INTELLIGENCE & COMPARATIVE GROWTH MEASURES
+// ------------------------------------------------------------------------------
+
+Prior Quarter Revenue = 
+/* Revenue in the preceding chronological transaction quarter / season */
+CALCULATE(
+    [Total Revenue],
+    DATEADD(dim_date[Date], -3, MONTH)
+)
+
+Quarterly Revenue Growth % = 
+/* Quarter-over-quarter revenue change */
+VAR _Current = [Total Revenue]
+VAR _Prior = [Prior Quarter Revenue]
+RETURN
+IF(
+    NOT(ISBLANK(_Prior)) && _Prior > 0,
+    DIVIDE(_Current - _Prior, _Prior, 0),
+    BLANK()
+)
+
+Cumulative YTD Revenue = 
+/* Year-to-date running cumulative revenue */
+TOTALYTD(
+    [Total Revenue],
+    dim_date[Date]
+)
