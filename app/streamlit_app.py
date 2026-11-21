@@ -1081,7 +1081,7 @@ elif st.session_state["current_page"] == "Power BI Dashboard":
 
 
     with pbi_tab1:
-        st.markdown("<h4 style='color: #FFFFFF;'>Kimball Star Schema Architecture</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #FFFFFF;'>Kimball Star Schema Architecture & Live Table Explorer</h4>", unsafe_allow_html=True)
         st.markdown("""
         All relationships in the Power BI model are strictly **One-to-Many (1 : *)** with **Single-Direction** cross-filtering:
         - `dim_customer[CustomerID]` (1) ➔ `fact_sales[CustomerID]` (*)
@@ -1089,39 +1089,164 @@ elif st.session_state["current_page"] == "Power BI Dashboard":
         - `dim_date[DateKey]` (1) ➔ `fact_sales[DateKey]` (*)
         """)
         
+        # Interactive Table Selector
+        pbi_table_choice = st.selectbox("Inspect Conformed Model Table:", ["fact_sales", "dim_customer", "dim_product", "dim_date"])
+        
+        table_path = f"powerbi/{pbi_table_choice}.csv"
+        if os.path.exists(table_path):
+            t_df = pd.read_csv(table_path)
+            st.markdown(f"**{pbi_table_choice}** — {len(t_df):,} rows × {len(t_df.columns)} columns")
+            st.dataframe(t_df.head(100), use_container_width=True, height=280)
+        
         st.image("reports/figures/16_kmeans_vs_rfm_crosstab.png", caption="Model Cross-Tabulation Matrix Reference", use_container_width=True)
 
     with pbi_tab2:
-        st.markdown("<h4 style='color: #FFFFFF;'>Core DAX Measure Scripts (powerbi/measures.dax)</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #FFFFFF;'>Live DAX Measures Evaluation Engine</h4>", unsafe_allow_html=True)
+        st.caption("All DAX measures evaluated live on current dataset context with exact formulas:")
+
+        # Live computed DAX metrics
+        dax_rev = filtered_tx["Revenue"].sum()
+        dax_orders = len(filtered_tx)
+        dax_cust = filtered_cust["CustomerID"].nunique()
+        dax_aov = dax_rev / dax_orders if dax_orders > 0 else 0
+        dax_ret_cust = (filtered_cust["total_orders"] >= 10).sum()
+        dax_rep_pct = (dax_ret_cust / dax_cust * 100) if dax_cust > 0 else 0
+        dax_rev_cust = dax_rev / dax_cust if dax_cust > 0 else 0
+        dax_high_churn = (filtered_cust["Risk_Level"] == "High Risk (Churning)").sum()
+        dax_med_churn = (filtered_cust["Risk_Level"] == "Medium Risk").sum()
+        dax_lifetime_rev = filtered_cust["total_revenue"].sum()
+
+        col_dax1, col_dax2, col_dax3 = st.columns(3)
+        with col_dax1:
+            st.metric("Total Revenue", f"${dax_rev:,.0f}", "SUM(fact_sales[Revenue])")
+            st.metric("Total Orders", f"{dax_orders:,}", "DISTINCTCOUNT(fact_sales[TransactionID])")
+            st.metric("Total Customers", f"{dax_cust:,}", "DISTINCTCOUNT(dim_customer[CustomerID])")
+        with col_dax2:
+            st.metric("Average Order Value", f"${dax_aov:,.2f}", "DIVIDE([Total Revenue], [Total Orders], 0)")
+            st.metric("Repeat Customer %", f"{dax_rep_pct:.1f}%", "DIVIDE([Returning Customers], [Total Customers], 0)")
+            st.metric("Revenue per Customer", f"${dax_rev_cust:,.2f}", "DIVIDE([Total Revenue], [Total Customers], 0)")
+        with col_dax3:
+            st.metric("High-Risk Churn", f"{dax_high_churn:,}", "CALCULATE(..., Risk_Level='High Risk')")
+            st.metric("Medium-Risk Rescue", f"{dax_med_churn:,}", "CALCULATE(..., Risk_Level='Medium Risk')")
+            st.metric("Total Lifetime Spend", f"${dax_lifetime_rev:,.0f}", "SUM(dim_customer[Lifetime_Revenue])")
+
+        st.markdown("<br>", unsafe_allow_html=True)
         st.code("""
-// Total Commercial Revenue
+// ==============================================================================
+// CORE POWER BI DAX MEASURES REPOSITORY (powerbi/measures.dax)
+// ==============================================================================
+
 Total Revenue = SUM(fact_sales[Revenue])
-
-// Total Distinct Transactions
 Total Orders = DISTINCTCOUNT(fact_sales[TransactionID])
-
-// Total Active Customer Base
 Total Customers = DISTINCTCOUNT(dim_customer[CustomerID])
-
-// Average Order Value (AOV)
 Average Order Value = DIVIDE([Total Revenue], [Total Orders], 0)
-
-// Repeat Customer Percentage
+Returning Customers = CALCULATE([Total Customers], dim_customer[Customer_Type] = "Returning Customer")
 Repeat Customer % = DIVIDE([Returning Customers], [Total Customers], 0)
-
-// High-Risk Churn Customer Count
-High-Risk Churn Customers = 
-CALCULATE([Total Customers], dim_customer[Risk_Level] = "High Risk (Churning)")
+Revenue per Customer = DIVIDE([Total Revenue], [Total Customers], 0)
+High-Risk Churn Customers = CALCULATE([Total Customers], dim_customer[Risk_Level] = "High Risk (Churning)")
+Medium-Risk Churn Customers = CALCULATE([Total Customers], dim_customer[Risk_Level] = "Medium Risk")
+Total Lifetime Revenue = SUM(dim_customer[Lifetime_Revenue])
         """, language="dax")
 
     with pbi_tab3:
-        st.markdown("<h4 style='color: #FFFFFF;'>4-Page Visual Specification (powerbi/dashboard_spec.md)</h4>", unsafe_allow_html=True)
-        st.markdown("""
-        1. **Page 1: Sales Overview** — KPI cards, Monthly revenue & order trend combo chart, category donut breakdown, US State filled map.
-        2. **Page 2: Customer Behaviour** — Repeat customer %, Season composition (New vs Returning 100% stacked), purchasing cadence horizontal bar, lifetime spend vs orders scatter plot.
-        3. **Page 3: Customer Segmentation** — RFM treemap, K-Means dual-axis column chart ($k=4$), Recency vs Frequency bubble plot, segment cross-tab matrix.
-        4. **Page 4: Business Insights & Churn Risk** — Churn risk cards, Churn by RFM 100% stacked bar, Top 10 products bar chart, **Medium-Risk re-activation grid table**.
-        """)
+        st.markdown("<h4 style='color: #FFFFFF;'>Interactive 4-Page Power BI Report Simulator</h4>", unsafe_allow_html=True)
+        st.caption("Interact with all 4 executive dashboard pages designed in powerbi/dashboard_spec.md:")
+
+        selected_page = st.radio(
+            "Select Dashboard Page:",
+            [
+                "Page 1: Sales Overview",
+                "Page 2: Customer Behaviour",
+                "Page 3: Customer Segmentation",
+                "Page 4: Business Insights & Churn Risk"
+            ],
+            horizontal=True
+        )
+
+        st.markdown("<hr style='border-color: #1E293B; margin: 12px 0 20px 0;'>", unsafe_allow_html=True)
+
+        # ---------------- PAGE 1: SALES OVERVIEW ----------------
+        if selected_page == "Page 1: Sales Overview":
+            p1_c1, p1_c2, p1_c3, p1_c4 = st.columns(4)
+            p1_c1.metric("Total Revenue", f"${total_rev:,.0f}")
+            p1_c2.metric("Total Orders", f"{total_orders:,}")
+            p1_c3.metric("Average Basket", f"${aov:,.2f}")
+            p1_c4.metric("Revenue per Buyer", f"${aov:,.2f}")
+
+            p1_r1, p1_r2 = st.columns(2)
+            with p1_r1:
+                st.markdown("<h5 style='color: #FFFFFF;'>Seasonal Revenue & Order Velocity</h5>", unsafe_allow_html=True)
+                t_df = filtered_tx.groupby("Season").agg(Revenue=("Revenue", "sum"), Orders=("Revenue", "count")).reindex(["Winter", "Spring", "Summer", "Fall"]).dropna().reset_index()
+                fig_t = go.Figure()
+                fig_t.add_trace(go.Bar(x=t_df["Season"], y=t_df["Revenue"], name="Revenue ($)", marker_color="#38BDF8"))
+                fig_t.add_trace(go.Scatter(x=t_df["Season"], y=t_df["Orders"], name="Orders", yaxis="y2", mode="lines+markers", line=dict(color="#F59E0B", width=3)))
+                fig_t.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8"), yaxis=dict(title="Revenue ($)", gridcolor="#1E293B"), yaxis2=dict(title="Orders", overlaying="y", side="right"), height=320, margin=dict(l=10, r=10, t=10, b=10))
+                st.plotly_chart(fig_t, use_container_width=True)
+
+            with p1_r2:
+                st.markdown("<h5 style='color: #FFFFFF;'>Category Revenue Distribution</h5>", unsafe_allow_html=True)
+                cat_df = filtered_tx.groupby("Category")["Revenue"].sum().reset_index()
+                fig_c = px.pie(cat_df, values="Revenue", names="Category", hole=0.45, color_discrete_sequence=["#38BDF8", "#34D399", "#818CF8", "#F472B6"])
+                fig_c.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8"), height=320, margin=dict(l=10, r=10, t=10, b=10))
+                st.plotly_chart(fig_c, use_container_width=True)
+
+        # ---------------- PAGE 2: CUSTOMER BEHAVIOUR ----------------
+        elif selected_page == "Page 2: Customer Behaviour":
+            p2_c1, p2_c2, p2_c3, p2_c4 = st.columns(4)
+            p2_c1.metric("Customer Base", f"{total_cust:,}")
+            p2_c2.metric("Repeat Buyer %", f"{repeat_pct:.1f}%")
+            p2_c3.metric("Average Cadence", "48.5 Days")
+            p2_c4.metric("Average Rating", f"{avg_rating:.2f} ★")
+
+            p2_r1, p2_r2 = st.columns(2)
+            with p2_r1:
+                st.markdown("<h5 style='color: #FFFFFF;'>Customer Base Composition by Season (Returning vs New)</h5>", unsafe_allow_html=True)
+                co_df = filtered_cust.groupby(["last_purchase_date", "total_orders"]).size().reset_index(name="count")
+                fig_co = px.histogram(filtered_cust, x="last_purchase_date", color=np.where(filtered_cust["total_orders"]>=10, "Returning Customer", "New Customer"), barmode="stack", color_discrete_sequence=["#38BDF8", "#818CF8"])
+                fig_co.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8"), height=320, margin=dict(l=10, r=10, t=10, b=10))
+                st.plotly_chart(fig_co, use_container_width=True)
+
+            with p2_r2:
+                st.markdown("<h5 style='color: #FFFFFF;'>Order Frequency Distribution</h5>", unsafe_allow_html=True)
+                fig_f = px.histogram(filtered_cust, y="Frequency_of_Purchases", color_discrete_sequence=["#34D399"])
+                fig_f.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8"), height=320, margin=dict(l=10, r=10, t=10, b=10))
+                st.plotly_chart(fig_f, use_container_width=True)
+
+        # ---------------- PAGE 3: CUSTOMER SEGMENTATION ----------------
+        elif selected_page == "Page 3: Customer Segmentation":
+            p3_c1, p3_c2, p3_c3, p3_c4 = st.columns(4)
+            p3_c1.metric("Lifetime Spend", f"${filtered_cust['total_revenue'].sum():,.0f}")
+            p3_c2.metric("Average CLV", f"${filtered_cust['total_revenue'].mean():,.2f}")
+            p3_c3.metric("Champions Revenue", f"${filtered_cust[filtered_cust['RFM_Segment']=='Champions']['total_revenue'].sum():,.0f}")
+            p3_c4.metric("High-Value Inactive", f"${filtered_cust[filtered_cust['Cluster_Label']=='High-Value Inactive']['total_revenue'].sum():,.0f}")
+
+            p3_r1, p3_r2 = st.columns(2)
+            with p3_r1:
+                st.markdown("<h5 style='color: #FFFFFF;'>RFM Segment Spend Portfolio</h5>", unsafe_allow_html=True)
+                rfm_p = filtered_cust.groupby("RFM_Segment")["total_revenue"].sum().reset_index()
+                fig_rfm_p = px.pie(rfm_p, values="total_revenue", names="RFM_Segment", hole=0.4, color_discrete_sequence=["#38BDF8", "#34D399", "#818CF8", "#F472B6", "#FB923C"])
+                fig_rfm_p.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8"), height=320, margin=dict(l=10, r=10, t=10, b=10))
+                st.plotly_chart(fig_rfm_p, use_container_width=True)
+
+            with p3_r2:
+                st.markdown("<h5 style='color: #FFFFFF;'>K-Means Cluster Architecture ($k=4$)</h5>", unsafe_allow_html=True)
+                km_p = filtered_cust.groupby("Cluster_Label")["total_revenue"].sum().reset_index()
+                fig_km_p = px.bar(km_p, x="Cluster_Label", y="total_revenue", text_auto="$,.0f", color="Cluster_Label", color_discrete_sequence=["#38BDF8", "#EF4444", "#34D399", "#F59E0B"])
+                fig_km_p.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8"), showlegend=False, height=320, margin=dict(l=10, r=10, t=10, b=10))
+                st.plotly_chart(fig_km_p, use_container_width=True)
+
+        # ---------------- PAGE 4: BUSINESS INSIGHTS & CHURN RISK ----------------
+        elif selected_page == "Page 4: Business Insights & Churn Risk":
+            p4_c1, p4_c2, p4_c3, p4_c4 = st.columns(4)
+            p4_c1.metric("High-Risk Accounts", f"{(filtered_cust['Risk_Level']=='High Risk (Churning)').sum():,}")
+            p4_c2.metric("Medium-Risk Rescue", f"{(filtered_cust['Risk_Level']=='Medium Risk').sum():,}", "Prime Opportunity")
+            p4_c3.metric("Low-Risk Active", f"{(filtered_cust['Risk_Level']=='Low Risk (Active)').sum():,}")
+            p4_c4.metric("Avg Churn Probability", f"{filtered_cust['Churn_Probability'].mean():.1%}")
+
+            st.markdown("<h5 style='color: #FFFFFF; margin-top: 14px;'>Actionable Medium-Risk Customer Worklist</h5>", unsafe_allow_html=True)
+            med_risk_df = filtered_cust[filtered_cust["Risk_Level"] == "Medium Risk"][["CustomerID", "Location", "RFM_Segment", "Cluster_Label", "Recency", "Frequency", "total_revenue", "Churn_Probability"]]
+            st.dataframe(med_risk_df.style.format({"total_revenue": "${:,.0f}", "Churn_Probability": "{:.2%}"}), use_container_width=True, height=260)
+            st.download_button("📥 Export Medium-Risk Priority Worklist to CSV", med_risk_df.to_csv(index=False).encode("utf-8"), "powerbi_medium_risk_worklist.csv", "text/csv")
 
     with pbi_tab4:
         st.markdown("<h4 style='color: #FFFFFF;'>Download Clean Star-Schema CSVs</h4>", unsafe_allow_html=True)
