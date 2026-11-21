@@ -65,6 +65,7 @@ project_ai_mern_image_generation/
 │   └── 07_churn_model.ipynb           # Phase 7: Leakage-free ML churn benchmark & feature importance
 │
 ├── powerbi/
+│   ├── Dashboard_cronus_to_for_project.pbix # Official Power BI Desktop dashboard file (1.64 MB)
 │   ├── fact_sales.csv                 # Transactional fact table (N=3,900)
 │   ├── dim_customer.csv               # Enriched customer dimension (RFM, clusters, churn)
 │   ├── dim_product.csv                # Product catalog dimension (25 items, 4 categories)
@@ -218,11 +219,14 @@ Navigate to `notebooks/` and execute sequentially:
 
 ## 7. Power BI Executive Dashboard Setup
 
-All data files and modeling documentation are prepared in `powerbi/`:
-1. Ingest `fact_sales.csv`, `dim_customer.csv`, `dim_product.csv`, `dim_date.csv` into Power BI Desktop.
-2. Verify relationships in Model View according to [`powerbi/model.md`](powerbi/model.md).
-3. Create a `_Measures` table and copy the pre-built DAX calculations from [`powerbi/measures.dax`](powerbi/measures.dax).
-4. Construct the 4-page dashboard following the exact visual layout in [`powerbi/dashboard_spec.md`](powerbi/dashboard_spec.md).
+The project includes the completed, pre-built Power BI dashboard file along with all underlying star-schema tables and documentation in `powerbi/`:
+
+1. **Directly Open Completed Dashboard:** Double-click [`powerbi/Dashboard_cronus_to_for_project.pbix`](powerbi/Dashboard_cronus_to_for_project.pbix) to launch the completed interactive report in **Power BI Desktop**.
+2. **Re-build / Re-link from Scratch (Optional):**
+   - Ingest `fact_sales.csv`, `dim_customer.csv`, `dim_product.csv`, `dim_date.csv` into Power BI Desktop via **Get Data -> Text/CSV**.
+   - Verify relationships in Model View according to [`powerbi/model.md`](powerbi/model.md).
+   - Create a `_Measures` table and copy the pre-built DAX calculations from [`powerbi/measures.dax`](powerbi/measures.dax).
+   - Construct the 4-page dashboard following the exact visual layout in [`powerbi/dashboard_spec.md`](powerbi/dashboard_spec.md).
 
 ---
 
@@ -250,6 +254,7 @@ Evaluated on held-out test cohort ($N = 780$, 80/20 Stratified Split) with balan
 | **Strategic Business Plan** | [`docs/business_recommendations.md`](docs/business_recommendations.md) | 7 Data-anchored commercial actions ($3.68M re-activation, VIP loyalty, bundles). |
 | **Presentation & Demo Guide** | [`docs/presentation_and_demo.md`](docs/presentation_and_demo.md) | 12-Slide deck outline, speaker notes, 3-min demo script, and viva defense Q&A. |
 | **Streamlit Companion App** | [`app/streamlit_app.py`](app/streamlit_app.py) | Standalone interactive web dashboard with live ML simulator. |
+| **Official Power BI Dashboard** | [`powerbi/Dashboard_cronus_to_for_project.pbix`](powerbi/Dashboard_cronus_to_for_project.pbix) | Complete interactive Power BI Desktop report with futuristic wireframe theme. |
 | **Power BI Specification** | [`powerbi/dashboard_spec.md`](powerbi/dashboard_spec.md) | 4-Page dashboard visual specification and 10-step build checklist. |
 | **DAX Measures File** | [`powerbi/measures.dax`](powerbi/measures.dax) | 20+ Production DAX measures for Power BI Desktop. |
 | **Model Evaluation Report** | [`reports/model_evaluation.md`](reports/model_evaluation.md) | Detailed ML performance benchmark and honest limitations. |

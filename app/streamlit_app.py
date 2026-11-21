@@ -1027,12 +1027,58 @@ elif st.session_state["current_page"] == "Power BI Dashboard":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    pbi_tab1, pbi_tab2, pbi_tab3, pbi_tab4 = st.tabs([
+    pbi_tab0, pbi_tab1, pbi_tab2, pbi_tab3, pbi_tab4 = st.tabs([
+        "Official .PBIX Dashboard",
         "Star Schema Model",
         "DAX Measures Library",
         "4-Page Visual Blueprint",
         "Export CSV Files"
     ])
+
+    with pbi_tab0:
+        st.markdown("<h4 style='color: #FFFFFF;'>Official Project Power BI Dashboard</h4>", unsafe_allow_html=True)
+        st.markdown("""
+        <div class="notice-box" style="border-left-color: #38BDF8;">
+            <strong>COMPLETED DASHBOARD READY:</strong> The official Power BI Desktop dashboard file 
+            <code>Dashboard_cronus_to_for_project.pbix</code> (1.64 MB) is fully built and integrated into this project.
+            It features custom futuristic wireframe visuals, conformed star-schema data bindings (<code>fact_sales</code>, <code>dim_customer</code>, <code>dim_product</code>, <code>dim_date</code>), and executive KPI cards.
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_dl1, col_dl2 = st.columns([6, 4])
+        with col_dl1:
+            pbix_path = "powerbi/Dashboard_cronus_to_for_project.pbix"
+            if os.path.exists(pbix_path):
+                with open(pbix_path, "rb") as f:
+                    st.download_button(
+                        label="📥 Download Official Project Dashboard (Dashboard_cronus_to_for_project.pbix)",
+                        data=f.read(),
+                        file_name="Dashboard_cronus_to_for_project.pbix",
+                        mime="application/octet-stream",
+                        use_container_width=True
+                    )
+            st.markdown("""
+            **How to Open in Power BI Desktop:**
+            1. Click the download button above to save `Dashboard_cronus_to_for_project.pbix`.
+            2. Double-click the file to open it directly in **Microsoft Power BI Desktop**.
+            3. All report visuals, interactive slicers, drillthrough filters on `RFM_Segment`, and data relationships will load automatically.
+            """)
+
+        with col_dl2:
+            st.markdown("""
+            <div class="metric-card" style="margin-top: 0;">
+                <div class="metric-label">Dashboard Artifact</div>
+                <div class="metric-value" style="font-size: 1.3rem;">.PBIX File</div>
+                <div class="metric-sub">Size: <strong>1.64 MB</strong> | High-Resolution Layout</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        wireframe_img = "reports/figures/20_powerbi_dashboard_wireframe.png"
+        if os.path.exists(wireframe_img):
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<h5 style='color: #F8FAFC;'>Futuristic Wireframe Design Layout</h5>", unsafe_allow_html=True)
+            st.image(wireframe_img, caption="Power BI Custom Dashboard Canvas Wireframe (1920x1080 Widescreen)", use_container_width=True)
+
 
     with pbi_tab1:
         st.markdown("<h4 style='color: #FFFFFF;'>Kimball Star Schema Architecture</h4>", unsafe_allow_html=True)
