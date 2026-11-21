@@ -923,7 +923,8 @@ elif st.session_state["current_page"] == "Streamlit Analytics":
             label="📥 Export Filtered Retention Worklist to CSV",
             data=csv_bytes,
             file_name="retention_campaign_target.csv",
-            mime="text/csv"
+            mime="text/csv",
+            key="dl_filtered_retention_worklist"
         )
 
     # --------------------------------------------------------------------------
@@ -1063,6 +1064,7 @@ elif st.session_state["current_page"] == "Power BI Dashboard":
                         data=f.read(),
                         file_name="Dashboard_cronus_to_for_project.pbix",
                         mime="application/octet-stream",
+                        key="btn_dl_pbix_official",
                         use_container_width=True
                     )
             st.markdown("""
@@ -1105,6 +1107,14 @@ elif st.session_state["current_page"] == "Power BI Dashboard":
             t_df = pd.read_csv(table_path)
             st.markdown(f"**{pbi_table_choice}** — {len(t_df):,} rows × {len(t_df.columns)} columns")
             st.dataframe(t_df.head(100), use_container_width=True, height=280)
+            st.download_button(
+                label=f"📥 Download Inspected Table ({pbi_table_choice}.csv)",
+                data=t_df.to_csv(index=False).encode("utf-8"),
+                file_name=f"{pbi_table_choice}.csv",
+                mime="text/csv",
+                key=f"dl_table_inspect_{pbi_table_choice}",
+                use_container_width=True
+            )
         
         st.image("reports/figures/16_kmeans_vs_rfm_crosstab.png", caption="Model Cross-Tabulation Matrix Reference", use_container_width=True)
 
@@ -1254,8 +1264,11 @@ Total Lifetime Revenue = SUM(dim_customer[Lifetime_Revenue])
 
             st.markdown("<h5 style='color: #FFFFFF; margin-top: 14px;'>Actionable Medium-Risk Customer Worklist</h5>", unsafe_allow_html=True)
             med_risk_df = filtered_cust[filtered_cust["Risk_Level"] == "Medium Risk"][["CustomerID", "Location", "RFM_Segment", "Cluster_Label", "Recency", "Frequency", "total_revenue", "Churn_Probability"]]
-            st.dataframe(med_risk_df.style.format({"total_revenue": "${:,.0f}", "Churn_Probability": "{:.2%}"}), use_container_width=True, height=260)
-            st.download_button("📥 Export Medium-Risk Priority Worklist to CSV", med_risk_df.to_csv(index=False).encode("utf-8"), "powerbi_medium_risk_worklist.csv", "text/csv")
+            if len(med_risk_df) > 0:
+                st.dataframe(med_risk_df.style.format({"total_revenue": "${:,.0f}", "Churn_Probability": "{:.2%}"}), use_container_width=True, height=260)
+                st.download_button("📥 Export Medium-Risk Priority Worklist to CSV", med_risk_df.to_csv(index=False).encode("utf-8"), "powerbi_medium_risk_worklist.csv", "text/csv", key="btn_dl_med_risk_pbi", use_container_width=True)
+            else:
+                st.info("No medium-risk customers in the currently filtered subset. Adjust interactive filters to view worklist.")
 
     with pbi_tab4:
         st.markdown("<h4 style='color: #FFFFFF;'>Download Clean Star-Schema CSVs</h4>", unsafe_allow_html=True)
@@ -1264,11 +1277,11 @@ Total Lifetime Revenue = SUM(dim_customer[Lifetime_Revenue])
         d_col1, d_col2 = st.columns(2)
         with d_col1:
             with open("powerbi/fact_sales.csv", "rb") as f:
-                st.download_button("📥 Download fact_sales.csv", f.read(), "fact_sales.csv", "text/csv")
+                st.download_button("📥 Download fact_sales.csv", f.read(), "fact_sales.csv", "text/csv", key="dl_tab4_fact_sales", use_container_width=True)
             with open("powerbi/dim_customer.csv", "rb") as f:
-                st.download_button("📥 Download dim_customer.csv", f.read(), "dim_customer.csv", "text/csv")
+                st.download_button("📥 Download dim_customer.csv", f.read(), "dim_customer.csv", "text/csv", key="dl_tab4_dim_customer", use_container_width=True)
         with d_col2:
             with open("powerbi/dim_product.csv", "rb") as f:
-                st.download_button("📥 Download dim_product.csv", f.read(), "dim_product.csv", "text/csv")
+                st.download_button("📥 Download dim_product.csv", f.read(), "dim_product.csv", "text/csv", key="dl_tab4_dim_product", use_container_width=True)
             with open("powerbi/dim_date.csv", "rb") as f:
-                st.download_button("📥 Download dim_date.csv", f.read(), "dim_date.csv", "text/csv")
+                st.download_button("📥 Download dim_date.csv", f.read(), "dim_date.csv", "text/csv", key="dl_tab4_dim_date", use_container_width=True)
