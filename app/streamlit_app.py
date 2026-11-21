@@ -417,8 +417,13 @@ with st.sidebar:
     if uploaded_file is not None:
         try:
             custom_tx = pd.read_csv(uploaded_file)
-            st.success(f"Custom dataset loaded: {len(custom_tx):,} rows")
-            clean_transactions = custom_tx
+            req_cols = ["CustomerID", "Item_Purchased", "Category", "Revenue", "Season", "Location"]
+            missing_cols = [c for c in req_cols if c not in custom_tx.columns]
+            if missing_cols:
+                st.error(f"Unable to load dataset: Missing required columns: {', '.join(missing_cols)}")
+            else:
+                st.success(f"Custom dataset loaded: {len(custom_tx):,} rows")
+                clean_transactions = custom_tx
         except Exception as e:
             st.error(f"Error reading uploaded file: {e}")
     else:
@@ -479,6 +484,16 @@ if sel_rfm:
 if sel_risks:
     filtered_cust = filtered_cust[filtered_cust["Risk_Level"].isin(sel_risks)]
     filtered_tx = filtered_tx[filtered_tx["CustomerID"].isin(filtered_cust["CustomerID"])]
+
+# ------------------------------------------------------------------------------
+# CORE SUMMARY METRICS (Global Scope for all Portal Views & Power BI Pages)
+# ------------------------------------------------------------------------------
+total_rev = float(filtered_tx["Revenue"].sum()) if ("Revenue" in filtered_tx.columns and len(filtered_tx) > 0) else 0.0
+total_orders = int(len(filtered_tx))
+total_cust = int(filtered_cust["CustomerID"].nunique()) if ("CustomerID" in filtered_cust.columns and len(filtered_cust) > 0) else len(filtered_cust)
+aov = float(total_rev / total_orders) if total_orders > 0 else 0.0
+repeat_pct = float((filtered_cust["total_orders"] >= 10).mean() * 100) if (len(filtered_cust) > 0 and "total_orders" in filtered_cust.columns) else 0.0
+avg_rating = float(filtered_cust["Review_Rating"].mean()) if (len(filtered_cust) > 0 and "Review_Rating" in filtered_cust.columns and not pd.isna(filtered_cust["Review_Rating"].mean())) else 0.0
 
 
 # ------------------------------------------------------------------------------
@@ -619,13 +634,6 @@ elif st.session_state["current_page"] == "Streamlit Analytics":
         """)
 
     # 5 Horizontal Metric Cards (Matching Image 2 Layout)
-    total_rev = filtered_tx["Revenue"].sum()
-    total_orders = len(filtered_tx)
-    total_cust = filtered_cust["CustomerID"].nunique()
-    aov = total_rev / total_orders if total_orders > 0 else 0
-    repeat_pct = (filtered_cust["total_orders"] >= 10).mean() * 100
-    avg_rating = filtered_cust["Review_Rating"].mean()
-
     m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
     with m_col1:
         st.markdown(f"""
@@ -1201,8 +1209,9 @@ Total Lifetime Revenue = SUM(dim_customer[Lifetime_Revenue])
             p2_r1, p2_r2 = st.columns(2)
             with p2_r1:
                 st.markdown("<h5 style='color: #FFFFFF;'>Customer Base Composition by Season (Returning vs New)</h5>", unsafe_allow_html=True)
-                co_df = filtered_cust.groupby(["last_purchase_date", "total_orders"]).size().reset_index(name="count")
-                fig_co = px.histogram(filtered_cust, x="last_purchase_date", color=np.where(filtered_cust["total_orders"]>=10, "Returning Customer", "New Customer"), barmode="stack", color_discrete_sequence=["#38BDF8", "#818CF8"])
+                plot_cust = filtered_cust.copy()
+                plot_cust["Customer_Type"] = np.where(plot_cust["total_orders"] >= 10, "Returning Customer", "New Customer")
+                fig_co = px.histogram(plot_cust, x="last_purchase_date", color="Customer_Type", barmode="stack", color_discrete_sequence=["#38BDF8", "#818CF8"])
                 fig_co.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8"), height=320, margin=dict(l=10, r=10, t=10, b=10))
                 st.plotly_chart(fig_co, use_container_width=True)
 
